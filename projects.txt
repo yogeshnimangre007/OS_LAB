@@ -1,0 +1,24 @@
+#include <iostream>
+#include <condition_variable>
+#include <thread>
+#include <vector>
+#include <random>
+#include <mutex>
+using namespace std;
+
+int main() {
+  const int NUM_READERS = 5;
+  const int NUM_WRITERS = 5;
+  std:: cout << std::thread::hardware_concurrency() << std::endl;
+  std::vector<std::thread> threads;
+  for(int i = 0; i < NUM_READERS; i++) {
+    threads.push_back(std::thread{read});
+  }
+  for(int i = 0; i < NUM_WRITERS; i++) {
+    threads.push_back(std::thread{write});
+  }
+  for(int i = 0; i < NUM_READERS + NUM_WRITERS; i++) {
+    threads[i].join();
+  }
+  return 0;
+}
