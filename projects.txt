@@ -5,6 +5,36 @@
 #include <random>
 #include <mutex>
 using namespace std;
+int readers_count = 0;
+int counter = 0;
+const int X = 5;
+std::mutex m;
+std::condition_variable reader_cond;
+std::condition_variable writer_cond;
+
+void read() {
+  std::mt19937 rng;
+  rng.seed(std::random_device()());
+  std::uniform_int_distribution<std::mt19937::result_type> dist(0, 20); 
+  std::unique_lock<std::mutex> lk(m, std::defer_lock);
+  for(int i = 0; i < X; i++) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(dist(rng)));
+    lk.lock();
+    if(readers_count == -1) {
+      reader_cond.wait(lk, [](){ return readers_count != -1; });
+    }
+    readers_count++;
+    lk.unlock();
+    std::cout << "read value: " << counter << ", number of readers: " << readers_count << std::endl;
+    lk.lock();
+    readers_count--;
+    if(readers_count == 0){
+      writer_cond.notify_all();
+    }
+    lk.unlock();
+  }
+}
+
 
 int main() {
   const int NUM_READERS = 5;
