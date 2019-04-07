@@ -4,7 +4,7 @@
 #include <vector>
 #include <random>
 #include <mutex>
-using namespace std;
+
 int readers_count = 0;
 int counter = 0;
 const int X = 5;
@@ -35,6 +35,28 @@ void read() {
   }
 }
 
+void write() {
+  std::mt19937 rng;
+  rng.seed(std::random_device()());
+  std::uniform_int_distribution<std::mt19937::result_type> dist(0, 20); 
+  std::unique_lock<std::mutex> lk(m, std::defer_lock);
+  for(int i = 0; i < X; i++) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(dist(rng)));
+    lk.lock();
+    if(readers_count > 0) {
+      writer_cond.wait(lk, [](){ return readers_count == 0; });
+    }
+    readers_count = -1;
+    lk.unlock();
+    counter++;
+    std::cout << "written value: " << counter << ", number of readers: " << readers_count << std::endl;
+    lk.lock();
+    readers_count = 0;
+    reader_cond.notify_all();
+    writer_cond.notify_all();
+    lk.unlock();
+  }
+}
 
 int main() {
   const int NUM_READERS = 5;
